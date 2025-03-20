@@ -11,6 +11,7 @@ import SendIcon from "@mui/icons-material/Send";
 import MicIcon from "@mui/icons-material/Mic";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import CloseIcon from "@mui/icons-material/Close";
+import { chatMessage, users } from "./Rank";
 
 interface IState {
   messages: {
@@ -25,52 +26,11 @@ interface IState {
   isChatOpen: boolean;
 }
 
-const users = ["/user1.jpg", "/user2.jpg", "/user3.jpg", "/user4.jpg"];
+
 
 class ChatUI extends Component<{}, IState> {
   state: IState = {
-    messages: [
-      {
-        id: 1,
-        user: "User1",
-        text: "Hello! 👋",
-        time: "08:00 am",
-        type: "text",
-        isMe: false,
-      },
-      {
-        id: 2,
-        user: "Me",
-        text: "Hi, Everyone 🔥",
-        time: "08:01 am",
-        type: "text",
-        isMe: true,
-      },
-      {
-        id: 3,
-        user: "User2",
-        text: "How are you, What did you do everyone",
-        time: "08:03 am",
-        type: "text",
-        isMe: false,
-      },
-      {
-        id: 4,
-        user: "User3",
-        text: "Good ✌️",
-        time: "08:05 am",
-        type: "text",
-        isMe: false,
-      },
-      {
-        id: 5,
-        user: "User4",
-        text: "audio",
-        time: "08:07 am",
-        type: "audio",
-        isMe: false,
-      },
-    ],
+    messages: chatMessage,
     newMessage: "",
     isChatOpen: false,
   };

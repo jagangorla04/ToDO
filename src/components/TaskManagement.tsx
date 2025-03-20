@@ -9,6 +9,7 @@ import {
   IconButton,
   Badge,
   Paper,
+  SxProps,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import NotificationsNoneIcon from "@mui/icons-material/NotificationsNone";
@@ -20,16 +21,15 @@ import logo from "../components/assets/logo.png";
 import profile from "../components/assets/profile.png";
 import Modals from "./Modal";
 import ChatUI from "./Chat";
+import { columns, users } from "./Rank";
 
-const users = ["/user1.jpg", "/user2.jpg", "/user3.jpg", "/user4.jpg"];
 
-const columns = ["Backlog", "To Do", "In Progress", "Review", "Completed"];
 
 interface ITask {
   title: string;
   description: string;
   dueDate: string;
-  file: File | null;
+  file: File | null | string;
   section: string;
   id: string;
 }
@@ -42,8 +42,14 @@ interface IState {
 class TaskManagement extends Component<{}, IState> {
   state: IState = {
     open: false,
-    tasks: [],
+    tasks: JSON.parse(localStorage.getItem("tasks") || "[]"),
   };
+
+  componentDidUpdate(_:{}, prevState: IState) {
+    if (prevState.tasks !== this.state.tasks) {
+      localStorage.setItem("tasks", JSON.stringify(this.state.tasks));
+    }
+  }
 
   handleOpen = () => this.setState({ open: true });
   handleClose = () => this.setState({ open: false });
@@ -54,14 +60,37 @@ class TaskManagement extends Component<{}, IState> {
     dueDate: string;
     file: File | null;
   }) => {
-    const taskWithId: ITask = {
-      ...newTask,
-      id: Math.random().toString(36).substr(2, 9),
-      section: "To Do",
-    };
-    this.setState((prevState) => ({
-      tasks: [...prevState.tasks, taskWithId],
-    }));
+    if (newTask.file) {
+      const reader = new FileReader();
+      reader.readAsDataURL(newTask.file);
+      reader.onload = () => {
+        const taskWithId: ITask = {
+          ...newTask,
+          id: Math.random().toString(36).substr(2, 9),
+          section: "To Do",
+          file: reader.result as string,
+        };
+
+        this.setState((prevState) => {
+          const updatedTasks = [...prevState.tasks, taskWithId];
+          localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+          return { tasks: updatedTasks };
+        });
+      };
+    } else {
+      const taskWithId: ITask = {
+        ...newTask,
+        id: Math.random().toString(36).substr(2, 9),
+        section: "To Do",
+        file: null,
+      };
+
+      this.setState((prevState) => {
+        const updatedTasks = [...prevState.tasks, taskWithId];
+        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
+        return { tasks: updatedTasks };
+      });
+    }
   };
 
   handleDragStart = (event: React.DragEvent, taskId: string) => {
@@ -71,7 +100,7 @@ class TaskManagement extends Component<{}, IState> {
   handleDrop = (event: React.DragEvent, newSection: string) => {
     event.preventDefault();
     const taskId = event.dataTransfer.getData("taskId");
-  
+
     this.setState((prevState) => {
       const tasks = prevState.tasks.map((task) => {
         if (task.id === taskId) {
@@ -83,11 +112,10 @@ class TaskManagement extends Component<{}, IState> {
         }
         return task;
       });
-  
+
       return { tasks };
     });
   };
-  
 
   handleDragOver = (event: React.DragEvent) => {
     event.preventDefault();
@@ -106,15 +134,8 @@ class TaskManagement extends Component<{}, IState> {
 
   render() {
     return (
-      <Box
-        display="flex"
-        sx={{ backgroundColor: "#F3F4F8", height: "100vh", maxHeight: "100" }}
-        flexDirection="column"
-      >
-        <AppBar
-          position="fixed"
-          sx={{ backgroundColor: "white", boxShadow: "none" }}
-        >
+      <Box display="flex" sx={styles.globalContainer} flexDirection="column">
+        <AppBar position="fixed" sx={styles.appBar}>
           <Box
             display="flex"
             justifyContent="space-between"
@@ -122,15 +143,8 @@ class TaskManagement extends Component<{}, IState> {
             alignItems="center"
           >
             <Box display="flex" flexDirection="column" alignItems="center">
-              <Box
-                component="img"
-                sx={{ width: "30px", height: "35px" }}
-                src={logo}
-              />
-              <Typography
-                variant="h6"
-                sx={{ color: "#23235F", fontSize: "14px", fontWeight: 700 }}
-              >
+              <Box component="img" sx={styles.logo} src={logo} />
+              <Typography variant="h6" sx={styles.textOctom}>
                 OCTOM.
               </Typography>
             </Box>
@@ -139,13 +153,7 @@ class TaskManagement extends Component<{}, IState> {
               size="small"
               variant="outlined"
               placeholder="Search anything..."
-              sx={{
-                "& fieldset": { border: "none" },
-                backgroundColor: "#F3F7FA",
-                borderRadius: "8px",
-                width: "290px",
-                height: "45px",
-              }}
+              sx={styles.inputSearch}
               InputProps={{
                 endAdornment: (
                   <IconButton>
@@ -197,33 +205,16 @@ class TaskManagement extends Component<{}, IState> {
                     }}
                   />
                 ))}
-                <Typography variant="body2" sx={{ mx: 1, fontWeight: 600 }}>
+                <Typography variant="body2" sx={styles.number}>
                   +6
                 </Typography>
-                <IconButton
-                  size="small"
-                  sx={{
-                    bgcolor: "#D9E0E8",
-                    border: "2px dashed grey",
-                    color: "#5D68FE",
-                  }}
-                >
+                <IconButton size="small" sx={styles.firstAddIcon}>
                   <AddIcon fontSize="small" />
                 </IconButton>
               </Box>
             </Box>
 
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                gap: 1,
-                overflowX: "auto",
-                whiteSpace: "nowrap",
-                width: "100%",
-                paddingBottom: "8px",
-              }}
-            >
+            <Box sx={styles.mainColumContainer}>
               {columns.map((column) => (
                 <Box
                   key={column}
@@ -236,43 +227,16 @@ class TaskManagement extends Component<{}, IState> {
                     overflowY: "auto",
                   }}
                 >
-                  <Box
-                    sx={{
-                      backgroundColor: "white",
-                      borderRadius: "10px",
-                      p: 2,
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      position: "sticky",
-                      top: 0,
-                      zIndex: 1,
-                      background: "white",
-                    }}
-                  >
-                    <Typography
-                      variant="h6"
-                      sx={{
-                        color: "#23235F",
-                        fontSize: "17px",
-                        fontWeight: 700,
-                      }}
-                    >
+                  <Box sx={styles.columContainer}>
+                    <Typography variant="h6" sx={styles.textColum}>
                       {column}
                     </Typography>
                     {column === "To Do" && (
-                      <Box
-                        sx={{
-                          display: "flex",
-                          justifyContent: "center",
-                          alignItems: "center",
-                          gap: 1,
-                        }}
-                      >
+                      <Box sx={styles.iconContainer}>
                         <MoreHorizIcon />
                         <IconButton
                           size="small"
-                          sx={{ bgcolor: "#E8EAFF", borderRadius: "7px" }}
+                          sx={styles.addIcon}
                           onClick={this.handleOpen}
                         >
                           <AddIcon fontSize="small" />
@@ -285,16 +249,11 @@ class TaskManagement extends Component<{}, IState> {
                     .filter((task) => task.section === column)
                     .map((task) => (
                       <Paper
-                        key={task.id} // Use task.id as key
+                        key={task.id}
                         elevation={2}
-                        sx={{
-                          padding: 2,
-                          borderRadius: "12px",
-                          backgroundColor: "#fff",
-                          mt: 2,
-                        }}
+                        sx={styles.paper}
                         draggable
-                        onDragStart={(e) => this.handleDragStart(e, task.id)} // Use task.id
+                        onDragStart={(e) => this.handleDragStart(e, task.id)}
                       >
                         <Typography
                           sx={{
@@ -312,46 +271,20 @@ class TaskManagement extends Component<{}, IState> {
                           {getSectionLabel(column)}
                         </Typography>
 
-                        {task.file && (
+                        {task.file && typeof task.file === "string" && (
                           <Box
                             component="img"
-                            src={URL.createObjectURL(task.file)}
+                            src={task.file}
                             alt="Task"
-                            sx={{
-                              width: "100%",
-                              borderRadius: "8px",
-                              marginTop: 1,
-                              objectFit: "cover",
-                            }}
+                            sx={styles.img}
                           />
                         )}
 
-                        <Typography
-                          variant="h6"
-                          sx={{
-                            color: "#232360",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            borderRadius: "6px",
-                            width: "20%",
-                            fontFamily: "DM Sans",
-                          }}
-                          mt={1}
-                        >
+                        <Typography variant="h6" sx={styles.textTitle} mt={1}>
                           {task.title}
                         </Typography>
 
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            color: "#768396",
-                            fontSize: "16px",
-                            fontWeight: 600,
-                            borderRadius: "6px",
-                            width: "20%",
-                            fontFamily: "DM Sans",
-                          }}
-                        >
+                        <Typography variant="body2" sx={styles.textDescription}>
                           {task.description}
                         </Typography>
 
@@ -405,3 +338,88 @@ const getSectionColor = (section: string) => {
 
   return colors[section] ?? "#5D6D7E";
 };
+
+const styles = {
+  globalContainer: {
+    backgroundColor: "#F3F4F8",
+    height: "100vh",
+    maxHeight: "100",
+  },
+  appBar: { backgroundColor: "white", boxShadow: "none" },
+  logo: { width: "30px", height: "35px" },
+  textOctom: { color: "#23235F", fontSize: "14px", fontWeight: 700 },
+  inputSearch: {
+    "& fieldset": { border: "none" },
+    backgroundColor: "#F3F7FA",
+    borderRadius: "8px",
+    width: "290px",
+    height: "45px",
+  },
+  number: { mx: 1, fontWeight: 600 },
+  firstAddIcon: {
+    bgcolor: "#D9E0E8",
+    border: "2px dashed grey",
+    color: "#5D68FE",
+  },
+  mainColumContainer: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: 1,
+    overflowX: "auto",
+    whiteSpace: "nowrap",
+    width: "100%",
+    paddingBottom: "8px",
+  },
+  columContainer: {
+    backgroundColor: "white",
+    borderRadius: "10px",
+    p: 2,
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    position: "sticky",
+    top: 0,
+    zIndex: 1,
+    background: "white",
+  },
+  textColum: {
+    color: "#23235F",
+    fontSize: "17px",
+    fontWeight: 700,
+  },
+  iconContainer: {
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 1,
+  },
+  textDescription: {
+    color: "#768396",
+    fontSize: "16px",
+    fontWeight: 600,
+    borderRadius: "6px",
+    width: "20%",
+    fontFamily: "DM Sans",
+  },
+  textTitle: {
+    color: "#232360",
+    fontSize: "16px",
+    fontWeight: 600,
+    borderRadius: "6px",
+    width: "20%",
+    fontFamily: "DM Sans",
+  },
+  img: {
+    width: "100%",
+    borderRadius: "8px",
+    marginTop: 1,
+    objectFit: "cover",
+  },
+  paper: {
+    padding: 2,
+    borderRadius: "12px",
+    backgroundColor: "#fff",
+    mt: 2,
+  },
+  addIcon: { bgcolor: "#E8EAFF", borderRadius: "7px" },
+} satisfies Record<string, SxProps>;

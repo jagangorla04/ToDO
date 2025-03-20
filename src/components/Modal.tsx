@@ -1,18 +1,8 @@
 import React, { Component } from "react";
 import Modal from "@mui/material/Modal";
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Box, Button, SxProps, TextField, Typography } from "@mui/material";
 
-const style = {
-  position: "absolute",
-  top: "50%",
-  left: "50%",
-  transform: "translate(-50%, -50%)",
-  width: 500,
-  bgcolor: "background.paper",
-  border: "2px solid #000",
-  boxShadow: 24,
-  p: 4,
-};
+
 
 interface IProps {
   open: boolean;
@@ -71,7 +61,7 @@ export default class Modals extends Component<IProps, IState> {
   render() {
     return (
       <Modal open={this.props.open} onClose={this.props.handleClose}>
-        <Box sx={style}>
+        <Box sx={styles.modal}>
           <Typography variant="h5" fontWeight={700} textAlign="center">
             Add Task
           </Typography>
@@ -127,3 +117,18 @@ export default class Modals extends Component<IProps, IState> {
     );
   }
 }
+
+const styles={
+  modal:{
+    position: "absolute",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+    width: 500,
+    bgcolor: "background.paper",
+    border: "2px solid #000",
+    boxShadow: 24,
+    p: 4,
+  }
+
+}satisfies Record<string,SxProps>

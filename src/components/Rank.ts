@@ -68,7 +68,7 @@ export interface UserRanking {
       profilePic: "https://randomuser.me/api/portraits/men/10.jpg",
       region: "SW",
     },
-    // NC region (5 users)
+  
     {
       name: "Sophia Davis",
       points: 99,
@@ -99,7 +99,7 @@ export interface UserRanking {
       profilePic: "https://randomuser.me/api/portraits/men/15.jpg",
       region: "NC",
     },
-    // SC region (5 users)
+    
     {
       name: "Isabella Anderson",
       points: 96,
@@ -130,7 +130,7 @@ export interface UserRanking {
       profilePic: "https://randomuser.me/api/portraits/women/20.jpg",
       region: "SC",
     },
-    // NE region (5 users)
+ 
     {
       name: "Charlotte Martinez",
       points: 100,
@@ -161,7 +161,7 @@ export interface UserRanking {
       profilePic: "https://randomuser.me/api/portraits/men/25.jpg",
       region: "NE",
     },
-    // SE region (5 users)
+    
     {
       name: "Amelia White",
       points: 97,
@@ -194,3 +194,49 @@ export interface UserRanking {
     },
   ];
   
+ export const users = ["/user1.jpg", "/user2.jpg", "/user3.jpg", "/user4.jpg"];
+
+ export const columns = ["Backlog", "To Do", "In Progress", "Review", "Completed"];
+
+ export const chatMessage=[
+  {
+    id: 1,
+    user: "User1",
+    text: "Hello! 👋",
+    time: "08:00 am",
+    type: "text",
+    isMe: false,
+  },
+  {
+    id: 2,
+    user: "Me",
+    text: "Hi, Everyone 🔥",
+    time: "08:01 am",
+    type: "text",
+    isMe: true,
+  },
+  {
+    id: 3,
+    user: "User2",
+    text: "How are you, What did you do everyone",
+    time: "08:03 am",
+    type: "text",
+    isMe: false,
+  },
+  {
+    id: 4,
+    user: "User3",
+    text: "Good ✌️",
+    time: "08:05 am",
+    type: "text",
+    isMe: false,
+  },
+  {
+    id: 5,
+    user: "User4",
+    text: "audio",
+    time: "08:07 am",
+    type: "audio",
+    isMe: false,
+  },
+]
