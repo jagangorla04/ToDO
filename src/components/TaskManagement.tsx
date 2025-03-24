@@ -4,7 +4,7 @@ import {
   Box,
   Typography,
   Avatar,
-  Chip,
+
   TextField,
   IconButton,
   Badge,
@@ -22,8 +22,14 @@ import profile from "../components/assets/profile.png";
 import Modals from "./Modal";
 import ChatUI from "./Chat";
 import { columns, users } from "./Rank";
+import { db } from "./firebaseConfig";
+import {
+ 
+  doc,
 
-
+  onSnapshot,
+  updateDoc,
+} from "firebase/firestore";
 
 interface ITask {
   title: string;
@@ -42,79 +48,77 @@ interface IState {
 class TaskManagement extends Component<{}, IState> {
   state: IState = {
     open: false,
-    tasks: JSON.parse(localStorage.getItem("tasks") || "[]"),
+    tasks: [],
   };
-
-  componentDidUpdate(_:{}, prevState: IState) {
-    if (prevState.tasks !== this.state.tasks) {
-      localStorage.setItem("tasks", JSON.stringify(this.state.tasks));
-    }
-  }
 
   handleOpen = () => this.setState({ open: true });
   handleClose = () => this.setState({ open: false });
 
-  addTask = (newTask: {
-    title: string;
-    description: string;
-    dueDate: string;
-    file: File | null;
-  }) => {
-    if (newTask.file) {
-      const reader = new FileReader();
-      reader.readAsDataURL(newTask.file);
-      reader.onload = () => {
-        const taskWithId: ITask = {
-          ...newTask,
-          id: Math.random().toString(36).substr(2, 9),
-          section: "To Do",
-          file: reader.result as string,
-        };
+  unsubscribe: (() => void) | null = null;
 
-        this.setState((prevState) => {
-          const updatedTasks = [...prevState.tasks, taskWithId];
-          localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-          return { tasks: updatedTasks };
-        });
-      };
-    } else {
-      const taskWithId: ITask = {
-        ...newTask,
-        id: Math.random().toString(36).substr(2, 9),
-        section: "To Do",
-        file: null,
-      };
+  subscribeToTasks = () => {
+    const docRef = doc(db, "todos", "tasksCollection");
 
-      this.setState((prevState) => {
-        const updatedTasks = [...prevState.tasks, taskWithId];
-        localStorage.setItem("tasks", JSON.stringify(updatedTasks));
-        return { tasks: updatedTasks };
-      });
-    }
+    this.unsubscribe = onSnapshot(
+      docRef,
+      (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const tasks = data.tasks || [];
+          console.log("Real-time tasks update:", tasks);
+          this.setState({ tasks });
+        } else {
+          this.setState({ tasks: [] });
+        }
+      },
+      (error) => {
+        console.error("Error fetching real-time tasks:", error);
+      }
+    );
   };
 
+  componentDidMount(): void {
+    this.subscribeToTasks();
+  }
+
+  componentWillUnmount(): void {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
   handleDragStart = (event: React.DragEvent, taskId: string) => {
     event.dataTransfer.setData("taskId", taskId);
   };
 
-  handleDrop = (event: React.DragEvent, newSection: string) => {
+  handleDrop = async (event: React.DragEvent, newSection: string) => {
     event.preventDefault();
     const taskId = event.dataTransfer.getData("taskId");
 
-    this.setState((prevState) => {
-      const tasks = prevState.tasks.map((task) => {
-        if (task.id === taskId) {
-          if (this.canMoveTask(task.section, newSection)) {
-            return { ...task, section: newSection };
-          } else {
-            alert("You cannot move this task to the selected section.");
-          }
-        }
-        return task;
-      });
+    try {
+      const { tasks } = this.state;
+      const taskIndex = tasks.findIndex(
+        (task) => task.id.toString() === taskId
+      );
 
-      return { tasks };
-    });
+      if (taskIndex === -1) return;
+
+      const task = tasks[taskIndex];
+
+      if (!this.canMoveTask(task.section, newSection)) {
+        alert("You cannot move this task to the selected section.");
+        return;
+      }
+
+      const updatedTasks = [...tasks];
+      updatedTasks[taskIndex] = { ...task, section: newSection };
+
+      const docRef = doc(db, "todos", "tasksCollection");
+      await updateDoc(docRef, { tasks: updatedTasks });
+
+      this.setState({ tasks: updatedTasks });
+    } catch (error) {
+      console.error("Error updating Firestore:", error);
+    }
   };
 
   handleDragOver = (event: React.DragEvent) => {
@@ -144,7 +148,11 @@ class TaskManagement extends Component<{}, IState> {
           >
             <Box display="flex" flexDirection="column" alignItems="center">
               <Box component="img" sx={styles.logo} src={logo} />
-              <Typography variant="h6" sx={styles.textOctom}>
+              <Typography
+                data-testid="textOctom"
+                variant="h6"
+                sx={styles.textOctom}
+              >
                 OCTOM.
               </Typography>
             </Box>
@@ -237,6 +245,7 @@ class TaskManagement extends Component<{}, IState> {
                         <IconButton
                           size="small"
                           sx={styles.addIcon}
+                          data-testid="openModal"
                           onClick={this.handleOpen}
                         >
                           <AddIcon fontSize="small" />
@@ -271,14 +280,14 @@ class TaskManagement extends Component<{}, IState> {
                           {getSectionLabel(column)}
                         </Typography>
 
-                        {task.file && typeof task.file === "string" && (
+                        {/*{task.file && typeof task.file === "string" && (
                           <Box
                             component="img"
                             src={task.file}
                             alt="Task"
                             sx={styles.img}
                           />
-                        )}
+                        )}*/}
 
                         <Typography variant="h6" sx={styles.textTitle} mt={1}>
                           {task.title}
@@ -288,14 +297,32 @@ class TaskManagement extends Component<{}, IState> {
                           {task.description}
                         </Typography>
 
-                        <Chip
+                        {/*<Chip
                           label={task.dueDate}
                           sx={{
-                            backgroundColor: "#f0f0f0",
+                            //backgroundColor: "#f0f0f0",
+                            border:"1px solid block",
                             fontSize: "12px",
                             marginTop: 1,
                           }}
-                        />
+                        />*/}
+                        <Typography
+                          sx={{
+                            
+                            border: "1px solid #E2E2E2",
+                            fontSize: "12px",
+                            marginTop: 1,
+                            borderRadius:"4px",
+                            width:'30%',
+                            color:"#232360",
+                            textAlign:"center",
+                            fontFamily:"DM Sans",
+                            fontWeight:700,
+                            
+                          }}
+                        >
+                          {task.dueDate}
+                        </Typography>
                       </Paper>
                     ))}
                 </Box>
@@ -304,9 +331,10 @@ class TaskManagement extends Component<{}, IState> {
           </Box>
         </Box>
         <Modals
-          addTask={this.addTask}
+          
           open={this.state.open}
           handleClose={this.handleClose}
+          data-testid="closeModal"
         />
         <ChatUI />
       </Box>

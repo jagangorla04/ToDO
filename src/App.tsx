@@ -12,8 +12,8 @@ function App() {
   return (
     <BrowserRouter>
     <Routes>
-      <Route path='/' element={<TaskManagement />} />
-      {/*<Route path='/home' element={<Home/>} />*/}
+      <Route path='/' element={<Login />} />
+      <Route path='/home' element={<TaskManagement/>} />
     </Routes>
     </BrowserRouter>
    

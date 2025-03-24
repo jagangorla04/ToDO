@@ -1,7 +1,14 @@
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { FacebookAuthProvider, getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-
+import { getFirestore } from "firebase/firestore";
+import { FacebookAuthProvider, getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
+import {
+  
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+} from "firebase/firestore";
 const firebaseConfig = {
   apiKey: "AIzaSyCo78Nqn6sovY7gU5EiScMCQ2S4T-a2ftE",
   authDomain: "example-2ab90.firebaseapp.com",
@@ -13,8 +20,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-
+export const db = getFirestore(app);
 export const auth = getAuth(app);
 
 const provider = new GoogleAuthProvider();
@@ -29,7 +35,9 @@ const providerFacebook = new FacebookAuthProvider();
 
 provider.addScope("email");  
 
+const logout = () => signOut(auth);
 
+export {  logout, collection, addDoc, onSnapshot, query, orderBy };
 export const signInWithFacebook = () =>signInWithPopup(auth, providerFacebook);
     
  

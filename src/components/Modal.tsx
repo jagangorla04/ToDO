@@ -1,25 +1,27 @@
 import React, { Component } from "react";
 import Modal from "@mui/material/Modal";
 import { Box, Button, SxProps, TextField, Typography } from "@mui/material";
-
-
+import {  arrayUnion, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { db } from "./firebaseConfig";
 
 interface IProps {
   open: boolean;
   handleClose: () => void;
-  addTask: (task: {
-    title: string;
-    description: string;
-    dueDate: string;
-    file: File | null;
-  }) => void;
+  
 }
 
+interface Task {
+  section: string;
+  title: string;
+  description: string;
+  dueDate: string;
+  file?: File | null;
+}
 interface IState {
   title: string;
   description: string;
   dueDate: string;
-  file: File | null;
+  file: string | null;
 }
 
 export default class Modals extends Component<IProps, IState> {
@@ -40,27 +42,56 @@ export default class Modals extends Component<IProps, IState> {
 
   handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      this.setState({ file: e.target.files[0] });
+    let file=  URL.createObjectURL(e.target.files[0])
+      this.setState({ file:file });
     }
   };
 
-  handleSubmit = () => {
-    const { title, description, dueDate, file } = this.state;
-   
-    if (!title || !description || !dueDate) {
+  handleSubmit = async () => {
+    const { title, description, dueDate,file } = this.state;
+  
+    if (!title.trim() || !description.trim() || !dueDate.trim()) {
       alert("Please fill all fields");
       return;
     }
-
-    this.props.addTask({ title, description, dueDate, file });
-
-    this.setState({ title: "", description: "", dueDate: "", file: null });
-    this.props.handleClose();
+  
+    try {
+      const task = {
+        id:Date.now(),
+        section: "To Do",
+        title,
+        description,
+        dueDate,
+        file
+    
+      };
+      const docRef = doc(db, "todos", "tasksCollection"); 
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        await updateDoc(docRef, {
+          tasks: arrayUnion(task),
+        });
+      } else {
+        await setDoc(docRef, {
+          tasks: [task],
+        });
+      }
+  
+      console.log("Task added successfully!");
+      this.setState({ title: "", description: "", dueDate: "", file: null });
+      this.props.handleClose();
+    } catch (error) {
+      console.error("Error adding task:", error);
+    }
   };
 
   render() {
     return (
-      <Modal open={this.props.open} onClose={this.props.handleClose}>
+      <Modal
+        open={this.props.open}
+        data-testid="closeModal"
+        onClose={this.props.handleClose}
+      >
         <Box sx={styles.modal}>
           <Typography variant="h5" fontWeight={700} textAlign="center">
             Add Task
@@ -68,7 +99,7 @@ export default class Modals extends Component<IProps, IState> {
 
           <TextField
             fullWidth
-            label="Title"
+            placeholder="Title"
             name="title"
             value={this.state.title}
             onChange={this.handleChange}
@@ -77,7 +108,7 @@ export default class Modals extends Component<IProps, IState> {
           />
           <TextField
             fullWidth
-            label="Description"
+            placeholder="Description"
             name="description"
             value={this.state.description}
             onChange={this.handleChange}
@@ -86,7 +117,7 @@ export default class Modals extends Component<IProps, IState> {
           />
           <TextField
             fullWidth
-            label="Due Date"
+            placeholder="Due Date"
             type="date"
             name="dueDate"
             value={this.state.dueDate}
@@ -99,6 +130,7 @@ export default class Modals extends Component<IProps, IState> {
             fullWidth
             type="file"
             onChange={this.handleFileChange}
+            inputProps={{ "data-testid": "file-input" }}
             variant="outlined"
             sx={{ my: 1 }}
             InputLabelProps={{ shrink: true }}
@@ -107,6 +139,7 @@ export default class Modals extends Component<IProps, IState> {
           <Button
             variant="contained"
             fullWidth
+            data-testid="subTest"
             sx={{ mt: 2, backgroundColor: "#2F80ED", color: "white" }}
             onClick={this.handleSubmit}
           >
@@ -118,8 +151,8 @@ export default class Modals extends Component<IProps, IState> {
   }
 }
 
-const styles={
-  modal:{
+const styles = {
+  modal: {
     position: "absolute",
     top: "50%",
     left: "50%",
@@ -129,6 +162,5 @@ const styles={
     border: "2px solid #000",
     boxShadow: 24,
     p: 4,
-  }
-
-}satisfies Record<string,SxProps>
+  },
+} satisfies Record<string, SxProps>;

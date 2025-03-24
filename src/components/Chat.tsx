@@ -8,199 +8,209 @@ import {
   Paper,
 } from "@mui/material";
 import SendIcon from "@mui/icons-material/Send";
-import MicIcon from "@mui/icons-material/Mic";
 import ChatBubbleOutlineIcon from "@mui/icons-material/ChatBubbleOutline";
 import CloseIcon from "@mui/icons-material/Close";
-import { chatMessage, users } from "./Rank";
+import { auth, db } from "./firebaseConfig";
+import {
+  addDoc,
+  collection,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
+import moment from "moment";
 
-interface IState {
-  messages: {
-    id: number;
-    user: string;
-    text: string;
-    time: string;
-    type: string;
-    isMe: boolean;
-  }[];
-  newMessage: string;
-  isChatOpen: boolean;
+interface IMessage {
+  id: string;
+  user: string;
+  text: string;
+  time: any;
+  photoURL: string;
 }
 
-
+interface IState {
+  messages: IMessage[];
+  newMessage: string;
+  isChatOpen: boolean;
+  user: any;
+}
 
 class ChatUI extends Component<{}, IState> {
   state: IState = {
-    messages: chatMessage,
+    messages: [],
     newMessage: "",
     isChatOpen: false,
+    user: null,
   };
 
-  toggleChat = () => {
-    this.setState((prevState) => ({ isChatOpen: !prevState.isChatOpen }));
+  unsubscribe: any = null;
+
+  componentDidMount() {
+    this.fetchMessages();
+    auth.onAuthStateChanged((user) => {
+      this.setState({ user });
+    });
+  }
+
+  componentWillUnmount() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+    }
+  }
+
+  fetchMessages = () => {
+    const q = query(collection(db, "messages"), orderBy("time", "asc"));
+    this.unsubscribe = onSnapshot(q, (snapshot) => {
+      const messages = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        console.log("Raw Firestore data:", data);
+
+        return {
+          id: doc.id,
+          user: data.user,
+          text: data.text,
+          time: data.time?.seconds
+            ? moment(new Date(data.time.seconds * 1000)).format("h:mm a")
+            : "...",
+          photoURL: data.photoURL || "",
+        };
+      }) as IMessage[];
+
+      console.log("Processed messages:", messages);
+      this.setState({ messages: [...messages] });
+    });
   };
 
   handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     this.setState({ newMessage: event.target.value });
   };
 
-  handleSendMessage = () => {
-    if (this.state.newMessage.trim() === "") return;
+  handleSendMessage = async () => {
+    const { newMessage, user } = this.state;
+    if (!newMessage.trim() || !user) return;
 
-    const newMessageObj = {
-      id: this.state.messages.length + 1,
-      user: "Me",
-      text: this.state.newMessage,
-      time: new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-      type: "text",
-      isMe: true,
-    };
+    try {
+      await addDoc(collection(db, "messages"), {
+        user: user.displayName,
+        text: newMessage,
+        time: serverTimestamp(),
+        photoURL: user.photoURL || "",
+      });
 
-    this.setState((prevState) => ({
-      messages: [...prevState.messages, newMessageObj],
-      newMessage: "",
-    }));
+      this.setState({ newMessage: "" });
+    } catch (error) {
+      console.error("Error sending message:", error);
+    }
+  };
+
+  toggleChat = () => {
+    this.setState((prevState) => ({ isChatOpen: !prevState.isChatOpen }));
   };
 
   render() {
+    const { messages, newMessage, isChatOpen, user } = this.state;
+
     return (
       <Box>
-        {this.state.isChatOpen && (
+        {isChatOpen && (
           <Box
             sx={{
               width: "380px",
               height: "675px",
-              borderRadius: "0px",
+              borderRadius: "10px",
               boxShadow: "0px 4px 10px rgba(0,0,0,0.1)",
               display: "flex",
               flexDirection: "column",
               backgroundColor: "white",
               position: "fixed",
               bottom: "80px",
-              right: "0px",
+              right: "20px",
               overflow: "hidden",
               zIndex: 1000,
             }}
           >
+          
             <Box
               sx={{
-                padding: "10px 15px",
+                padding: "10px",
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
-
+                backgroundColor: "#ff9a40",
                 color: "white",
               }}
             >
-              <Typography
-                fontWeight={600}
-                sx={{ color: "grey" }}
-                fontSize="16px"
-              >
-                Member (25)
+              <Typography fontWeight={600} fontSize="16px">
+                Chat Room
               </Typography>
-              <Typography sx={{ color: "grey" }} fontSize="16px">
-                View All
-              </Typography>
+              <IconButton onClick={this.toggleChat} sx={{ color: "white" }}>
+                <CloseIcon />
+              </IconButton>
             </Box>
 
-            <Box display="flex" sx={{ padding: 1 }} alignItems="center">
-              {users.map((user, index) => (
-                <Avatar
-                  key={index}
-                  src={user}
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    border: "2px solid white",
-                  }}
-                />
-              ))}
-            </Box>
             <Box sx={{ flexGrow: 1, padding: "10px", overflowY: "auto" }}>
-              <Typography
-                fontWeight={600}
-                sx={{ color: "grey" }}
-                fontSize="16px"
-              >
-                Group Chat
-              </Typography>
-              <Box sx={{ marginTop: 2 }}>
-                {this.state.messages.map((msg) => (
+              {messages.length > 0 ? (
+                messages.map((msg, index) => (
                   <Box
                     key={msg.id}
                     sx={{
                       display: "flex",
-                      flexDirection: msg.isMe ? "row-reverse" : "row",
+                      flexDirection:
+                        msg.user === user?.displayName ? "row-reverse" : "row",
+                      alignItems: "center",
+                      gap: "8px",
                       marginBottom: "10px",
                     }}
                   >
-                    <Avatar sx={{ width: 30, height: 30, margin: "0 8px" }} />
-                    {msg.type === "text" ? (
-                      <Paper
-                        sx={{
-                          padding: "10px",
-                          borderRadius: "10px",
-                          backgroundColor: msg.isMe ? "#6C4EF5" : "#EEF1F7",
-                          color: msg.isMe ? "white" : "#333",
-                          maxWidth: "70%",
-                        }}
+                    <Avatar
+                      src={msg.photoURL}
+                      sx={{ width: 30, height: 30 }}
+                    />
+                    <Paper
+                      sx={{
+                        padding: "10px",
+                        borderRadius: "10px",
+                        backgroundColor:
+                          msg.user === user?.displayName ? "#6C4EF5" : "#EEF1F7",
+                        color: msg.user === user?.displayName ? "white" : "#333",
+                        maxWidth: "70%",
+                      }}
+                    >
+                      <Typography fontSize="14px">{msg.text}</Typography>
+                      <Typography
+                        fontSize="10px"
+                        color="gray"
+                        sx={{ textAlign: "right", marginTop: "5px" }}
                       >
-                        <Typography fontSize="14px">{msg.text}</Typography>
-                        <Typography
-                          fontSize="10px"
-                          color="gray"
-                          sx={{ textAlign: "right", marginTop: "5px" }}
-                        >
-                          {msg.time}
-                        </Typography>
-                      </Paper>
-                    ) : (
-                      <Paper
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          padding: "10px",
-                          borderRadius: "10px",
-                          backgroundColor: "#EEF1F7",
-                          width: "60%",
-                        }}
-                      >
-                        <IconButton sx={{ color: "#6C4EF5" }}>
-                          <MicIcon />
-                        </IconButton>
-                        <Typography fontSize="12px" color="gray">
-                          1:25
-                        </Typography>
-                      </Paper>
-                    )}
+                        {msg.time}
+                      </Typography>
+                    </Paper>
                   </Box>
-                ))}
-              </Box>
+                ))
+              ) : (
+                <Typography sx={{ textAlign: "center", color: "gray" }}>
+                  No messages yet
+                </Typography>
+              )}
             </Box>
 
+           
             <Box
               sx={{
                 display: "flex",
-                alignItems: "center",
                 padding: "10px",
                 borderTop: "1px solid #E0E0E0",
               }}
             >
               <TextField
                 fullWidth
-                placeholder="Write here..."
+                placeholder="Type a message..."
                 variant="outlined"
                 size="small"
-                value={this.state.newMessage}
+                value={newMessage}
                 onChange={this.handleInputChange}
-                sx={{
-                  backgroundColor: "#F5F5F5",
-                  borderRadius: "8px",
-                  "& .MuiOutlinedInput-root": { border: "none" },
-                }}
+                sx={{ backgroundColor: "#F5F5F5", borderRadius: "8px" }}
               />
               <IconButton
                 sx={{ color: "#6C4EF5" }}
@@ -212,6 +222,7 @@ class ChatUI extends Component<{}, IState> {
           </Box>
         )}
 
+       
         <IconButton
           sx={{
             position: "fixed",
@@ -219,17 +230,12 @@ class ChatUI extends Component<{}, IState> {
             right: "20px",
             backgroundColor: "#6C4EF5",
             color: "white",
-            "&:hover": { backgroundColor: "#4A32D4" },
             width: "56px",
             height: "56px",
-            boxShadow: "0px 4px 10px rgba(0,0,0,0.2)",
           }}
+          onClick={this.toggleChat}
         >
-          {this.state.isChatOpen ? (
-            <CloseIcon onClick={this.toggleChat} />
-          ) : (
-            <ChatBubbleOutlineIcon fontSize="large" onClick={this.toggleChat} />
-          )}
+          {isChatOpen ? <CloseIcon /> : <ChatBubbleOutlineIcon fontSize="large" />}
         </IconButton>
       </Box>
     );
