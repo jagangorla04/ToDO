@@ -65,7 +65,7 @@ class TaskManagement extends Component<{}, IState> {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const tasks = data.tasks || [];
-          console.log("Real-time tasks update:", tasks);
+        
           this.setState({ tasks });
         } else {
           this.setState({ tasks: [] });
@@ -297,15 +297,7 @@ class TaskManagement extends Component<{}, IState> {
                           {task.description}
                         </Typography>
 
-                        {/*<Chip
-                          label={task.dueDate}
-                          sx={{
-                            //backgroundColor: "#f0f0f0",
-                            border:"1px solid block",
-                            fontSize: "12px",
-                            marginTop: 1,
-                          }}
-                        />*/}
+                        
                         <Typography
                           sx={{
                             
