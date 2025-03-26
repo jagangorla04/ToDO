@@ -64,6 +64,8 @@ class EcommerceHome extends Component<Iprops, Istate> {
           <MyCarousel />
         </Box>
 
+        
+
         <Box
           sx={{
             display: "flex",
