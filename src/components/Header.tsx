@@ -153,11 +153,12 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "center",
     flexWrap: "wrap",
+    gap:{xs:2,sm:0}
   },
   appBar: {
     backgroundColor: "white",
     borderBottom: "1px solid lightgray",
-    paddingX: 1.1,
+    paddingX:{xs:0, sm:1.1},
   },
   main: { p: "20px" },IconBtn:{ cursor:"pointer",}
 } satisfies Record<string, SxProps>;
